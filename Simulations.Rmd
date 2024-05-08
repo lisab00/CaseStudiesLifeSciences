@@ -1,0 +1,438 @@
+---
+title: "Simulations for general Epidemic Model"
+output: html_notebook
+---
+
+Load needed Packages and set theme:
+
+```{r}
+library(ggplot2)
+library(data.table)
+library(tidyr)
+library(pracma)
+library(readr)
+library(deSolve)
+library(dplyr)
+
+ggplot2::theme_set(ggplot2::theme_classic())
+thm <- theme(axis.title=element_text(size=20),
+        axis.text = element_text(size=15),
+        legend.position = "top",
+        legend.title = element_text(size = 20),
+        legend.text = element_text(size = 20))
+```
+
+Set up parameter values and initial values:
+
+```{r}
+fictitous <- list(delta=0.15, mu=0.001, muI=0.001, fMuI2=1, alphaP=1, muP=0.1, deltaV=0.1, muV=0.001, a1=10, a2=1, a3=1,
+                         a4=1, a5=0, a6=0, b6=00, a7=0.1, a8=0.5, a13=0.1, a16=0.1, a18=1, a19=0.01, e1=0.9, e2=1,
+                         f14_3=1, f15_6=1, f17_4=1, fE=0, fI1=1, fI2=1, fD=1, fP=1, transHH=T, transHV=T, transVV=T, transVH=T, transPH=T)
+ivFictitous <- c(S=97, E=1, I1=1, I2=1, R=0, V1=0, V2=0, D1=0, D2=0, SV=99, IV=1, P=1)
+
+#alemneh2023 <- list(delta=96.2245, mu=0.00875, muI=0.125, fMuI2=1, alphaP=0.04, muP=0.08, deltaV=0, muV=0, a1=0, a2=0, a3=0,
+#                         a4=0, a5=0.0009091, a6=0.14286, b6=0, a7=0.6, a8=0, a13=0, a16=0, a18=0, a19=0, e1=0.9999997, e2=0,
+#                         f14_3=1, f15_6=1, f17_4=1, fE=0, fI1=1, fI2=1, fD=1, fP=0.57199, transHH=T, transHV=F, transVV=F, transVH=F, transPH=F) #values taken from [Alemneh2023Hindawi]
+#ivAlemneh2023 <- 0
+
+measlesPakistan <- list(delta=260479, mu=0.00125, muI=0, fMuI2=1, alphaP=0, muP=0, deltaV=0, muV=0, a1=36.812, a2=0.92373, a3=0,
+                         a4=0, a5=0, a6=9.3408, b6=0, a7=0.58306, a8=0, a13=0, a16=0, a18=0, a19=0, e1=0.97, e2=0,
+                         f14_3=1, f15_6=1, f17_4=1, fE=0, fI1=1, fI2=1, fD=1, fP=0, transHH=T, transHV=F, transVV=F, transVH=F, transPH=0) #values taken from [Memon2020]
+ivMeaslesPakistan <- c(S=230000000, E=0, I1=237, I2=0, R=0, V1=0, V2=0, D1=0, D2=0, SV=0, IV=0, P=0)
+
+#varicellaHu <-list(delta=100000, mu=0.01, muI=0.001, fMuI2=1, alphaP=0, muP=0, deltaV=0, muV=0, a1=768.94, a2=26, a3=0,
+#                         a4=0, a5=0, a6=52, b6=0, a7=0, a8=0, a13=0, a16=0, a18=0, a19=0, e1=0, e2=0,
+#                         f14_3=1, f15_6=1, f17_4=1, fE=0, fI1=1, fI2=1, fD=1, fP=0, transHH=T, transHV=F, transVV=F, transVH=F, transPH=F) #values taken from [Karsai2019]
+#ivVaricellaHu <- c(S=10000000, E=0, I1=40, I2=0, R=0, V1=0, V2=0, D1=0, D2=0, SV=0, IV=0, P=0)
+
+#parameters <- list(delta=0, mu=0, muI=0.001, fMuI2=1, alphaP=1, muP=1, deltaV=0, muV=0, a1=10, a2=2, a3=2,
+#                         a4=2, a5=0, a6=0, b6=0.001, a7=0, a8=0, a13=0, a16=0, a18=0, a19=0, e1=0, e2=0,
+#                         f14_3=1, f15_6=1, f17_4=1, fE=0, fI1=1, fI2=1, fD=1, fP=0.57199, transHH=T, transHV=F, transVV=F, transVH=F, transPH=T)
+#parameters <- c(S=100, E=1, I1=1, I2=1, R=0, V1=0, V2=0, D1=0, D2=0, SV=100, IV=1, P=1)
+
+
+```
+
+Set up general ODE model:
+
+```{r}
+fconst <- function(t){
+  return(1)
+}
+
+model <- function(t, x, parameters, f=fconst){
+    
+    S <- x[1]
+    E <- x[2]
+    I1 <- x[3]
+    I2 <- x[4]
+    R <- x[5]
+    V1 <- x[6]
+    V2 <- x[7]
+    D1 <- x[8]  
+    D2 <- x[9]
+    SV <- x[10]
+    IV <- x[11]
+    P <- x[12]
+    
+    f1 <- f(t)
+    e1 <- parameters$e1
+    e2 <- parameters$e2
+    f14_3 <- parameters$f14_3
+    f15_6 <- parameters$f15_6
+    f17_4 <- parameters$f17_4
+    fE <- parameters$fE
+    fI1 <- parameters$fI1
+    fI2 <- parameters$fI2
+    fD <- parameters$fD
+    fP <- parameters$fP
+    fMuI2 <- parameters$fMuI2
+    
+    delta <- parameters$delta
+    mu <- parameters$mu
+    muI <- parameters$muI
+    muI1 <- muI + mu
+    muI2 <- fMuI2 * muI + mu
+    deltaV <- parameters$deltaV
+    muV <- parameters$muV
+    alphaP <- parameters$alphaP
+    muP <- parameters$muP
+    a1 <- parameters$a1
+    a2 <- parameters$a2
+    a3 <- parameters$a3
+    a4 <- parameters$a4
+    a5 <- parameters$a5
+    a6 <- parameters$a6
+    b6 <- parameters$b6
+    a7 <- parameters$a7
+    a8 <- parameters$a8
+    a9 <- (1-e2)*a1
+    a10 <- (1-e1)*a1
+    a11 <- (1-e1)*a5
+    a12 <- (1-e2)*a5
+    a13 <- parameters$a13
+    a14 <- f14_3*a3
+    a15 <- f15_6*a6
+    a16 <- parameters$a16
+    a17 <- f17_4*a4
+    a18 <- parameters$a18
+    a19 <- parameters$a19
+    transHH <- parameters$transHH
+    transHV <- parameters$transHV
+    transVV <- parameters$transVV
+    transVH <- parameters$transVH
+    transPH <- parameters$transPH
+    
+    N <- S+E+I1+I2+R+V1+V2+D1+D2 #total human population N
+    infH <- fE*E+fI1*I1+fI2*I2+fD*(fI1*D1+fI2*D2) #infective Population infH weighted by relative infectivities fE, FI1, fI2, fD
+    phiH <- max(0,infH/N, na.rm = T)
+    NV <- SV+IV #total vector population
+    phiV <- max(0,IV/NV, na.rm = T)
+    phiP <- max(0,fP*P/N, na.rm = T)
+    
+    #model code
+    dSdt <- delta + a19*R - a1*(transHH*phiH+transVH*phiV+transPH*phiP)*S - a5*S*(transHH*phiH+transVH*phiV+transPH*phiP) - a7*S - mu*S
+    dEdt <- a1*S*(transHH*phiH+transVH*phiV+transPH*phiP) + a10*V1*(transHH*phiH+transVH*phiV+transPH*phiP) + a9*V2*(transHH*phiH+transVH*phiV+transPH*phiP) - a2*E - mu*E
+    dI1dt <- a2*E + a5*S*(transHH*phiH+transVH*phiV+transPH*phiP) + a11*V1*(transHH*phiH+transVH*phiV+transPH*phiP) + a12*V2*(transHH*phiH+transVH*phiV+transPH*phiP) - (a3+a6+a13)*I1 + b6*R  - (muI1)*I1
+    dI2dt <- a3*I1 - (a4+a16)*I2 - (muI2)*I2
+    dRdt <- a4*I2 + a6*I1 + a15*D1 + a17*D2 - b6*R - a19*R - mu*R
+    dV1dt <- a7*S - a8*V1 - (a10+a11)*V1*(transHH*phiH+transVH*phiV+transPH*phiP) - mu*V1
+    dV2dt <- a8*V1 - (a9+a12)*V2*(transHH*phiH+transVH*phiV+transPH*phiP) - mu*V2
+    dD1dt <- a13*I1 -(a14+a15)*D1 - (muI1)*D1
+    dD2dt <- a14*D1 + a16*I2 - a17*D2 - (muI2)*D2
+    dSVdt <- deltaV - a18*SV*(transHV*phiH + transVV*phiV) - muV*SV
+    dIVdt <- a18*SV*(transHV*phiH + transVV*phiV) - muV*IV
+    dPdt <- alphaP*infH - muP*P
+
+    
+    #return list of diffs
+    list(c(dSdt, dEdt, dI1dt, dI2dt, dRdt, dV1dt, dV2dt, dD1dt, dD2dt, dSVdt, dIVdt, dPdt))
+  }
+```
+
+R0:
+
+```{r}
+R0HH <- function(p){
+  f1 <- fconst(t)
+    e1 <- p$e1
+    e2 <- p$e2
+    f14_3 <- p$f14_3
+    f15_6 <- p$f15_6
+    f17_4 <- p$f17_4
+    fE <- p$fE
+    fI1 <- p$fI1
+    fI2 <- p$fI2
+    fD <- p$fD
+    fP <- p$fP
+    fMuI2 <- p$fMuI2    
+    delta <- p$delta
+    mu <- p$mu
+    muI <- p$muI
+    muI1 <- muI + mu
+    muI2 <- fMuI2 * muI + mu
+    deltaV <- p$deltaV
+    muV <- p$muV
+    alphaP <- p$alphaP
+    muP <- p$muP
+    a1 <- p$a1
+    a2 <- p$a2
+    a3 <- p$a3
+    a4 <- p$a4
+    a5 <- p$a5
+    a6 <- p$a6
+    b6 <- p$b6
+    a7 <- p$a7
+    a8 <- p$a8
+    a9 <- (1-e2)*a1
+    a10 <- (1-e1)*a1
+    a11 <- (1-e1)*a5
+    a12 <- (1-e2)*a5
+    a13 <- p$a13
+    a14 <- f14_3*a3
+    a15 <- f15_6*a6
+    a16 <- p$a16
+    a17 <- f17_4*a4
+    a18 <- p$a18
+    a19 <- p$a19
+    
+A <- (a1*mu*(a8+mu)+a7*a10*mu+a7*a8*a9)/((a7+mu)*(a8+mu))
+C <- (fE/(a2+mu)) + ((fI1*a2)/((a2+mu)*(a3+a6+a13+muI1))) + ((fD*fI1*a2*a13)/((a2+mu)*(a3+a6+a13+muI1)*(a14+a15+muI1))) + ((fD*fI2*a2*((a3*a16*(a14+a15+muI1))+(a13*a14*(a4+a16+muI2))))/((a2+mu)*(a3+a6+a13+muI1)*(a4+a16+muI2)*(a14+a15+muI1)*(a17+muI2)))
+R0 <- A*C
+
+return(R0)
+}
+```
+
+Fictitious plots:
+```{r}
+parameters <- fictitous
+initials <- ivFictitous
+
+
+simulation <- as.data.table(
+  ode(func = model,
+      y = initials,
+      times = seq(1, 10, 0.1),
+      parms = parameters)
+)
+
+df <- gather(simulation, key = Compartment, value = count, c("S", "E", "I1", "I2","R"))
+df$Compartment <- factor(df$Compartment, levels = c("S", "E", "I1", "I2","R"))
+ggplot(df, aes(x = time, y=count, group=Compartment, color=Compartment)) + geom_line(size=1) + labs(x = "Time", y = "Individuals", color="Compartment") + thm + scale_color_manual(values = c("black","yellow3","orange2","tomato2","slateblue2"))
+df <- gather(simulation, key = Compartment, value = count, c("SV", "IV", "P"))
+df$Compartment <- factor(df$Compartment, levels = c("SV", "IV", "P"))
+ggplot(df, aes(x = time, y=count, group=Compartment, color=Compartment)) + geom_line(size=1) + labs(x = "Time", y = "Individuals", color="Compartment") + thm + scale_color_manual(values = c("black","tomato2","steelblue3"))
+df <- gather(simulation, key = Compartment, value = count, c("D1", "D2"))
+df$Compartment <- factor(df$Compartment, levels = c("D1", "D2"))
+ggplot(df, aes(x = time, y=count, group=Compartment, color=Compartment)) + geom_line(size=1) + labs(x = "Time", y = "Individuals", color="Compartment") + thm + scale_color_manual(values = c("lightgoldenrod3","indianred3"))
+df <- gather(simulation, key = Compartment, value = count, c("V1", "V2"))
+df$Compartment <- factor(df$Compartment, levels = c("V1", "V2"))
+ggplot(df, aes(x = time, y=count, group=Compartment, color=Compartment)) + geom_line(size=1) + labs(x = "Time", y = "Individuals", color="Compartment") + thm  + scale_color_manual(values = c("springgreen3","black"))
+
+```
+Increasing vaccination for fictitious plots:
+```{r}
+parameters <- fictitous
+initials <- ivFictitous
+parameters$a7 <- 1
+
+simulation <- as.data.table(
+  ode(func = model,
+      y = initials,
+      times = seq(1, 10, 0.1),
+      parms = parameters)
+)
+
+df <- gather(simulation, key = Compartment, value = count, c("S", "E", "I1", "I2","R"))
+df$Compartment <- factor(df$Compartment, levels = c("S", "E", "I1", "I2","R"))
+ggplot(df, aes(x = time, y=count, group=Compartment, color=Compartment)) + geom_line(size=1) + labs(x = "Time", y = "Individuals", color="Compartment") + thm + scale_color_manual(values = c("black","yellow3","orange2","tomato2","slateblue2"))
+df <- gather(simulation, key = Compartment, value = count, c("SV", "IV", "P"))
+df$Compartment <- factor(df$Compartment, levels = c("SV", "IV", "P"))
+ggplot(df, aes(x = time, y=count, group=Compartment, color=Compartment)) + geom_line(size=1) + labs(x = "Time", y = "Individuals", color="Compartment") + thm
+df <- gather(simulation, key = Compartment, value = count, c("D1", "D2"))
+df$Compartment <- factor(df$Compartment, levels = c("D1", "D2"))
+ggplot(df, aes(x = time, y=count, group=Compartment, color=Compartment)) + geom_line(size=1) + labs(x = "Time", y = "Individuals", color="Compartment") + thm
+df <- gather(simulation, key = Compartment, value = count, c("V1", "V2"))
+df$Compartment <- factor(df$Compartment, levels = c("V1", "V2"))
+ggplot(df, aes(x = time, y=count, group=Compartment, color=Compartment)) + geom_line(size=1) + labs(x = "Time", y = "Individuals", color="Compartment") + thm
+```
+Increasing detection with quarantine for fictitious plots:
+```{r}
+parameters <- fictitous
+initials <- ivFictitous
+parameters$fD <- 0
+parameters$a13 <- 1
+parameters$a16 <- 1
+
+simulation <- as.data.table(
+  ode(func = model,
+      y = initials,
+      times = seq(1, 10, 0.1),
+      parms = parameters)
+)
+
+df <- gather(simulation, key = Compartment, value = count, c("S", "E", "I1", "I2","R"))
+df$Compartment <- factor(df$Compartment, levels = c("S", "E", "I1", "I2","R"))
+ggplot(df, aes(x = time, y=count, group=Compartment, color=Compartment)) + geom_line(size=1) + labs(x = "Time", y = "Individuals", color="Compartment") + thm + scale_color_manual(values = c("black","yellow3","orange2","tomato2","slateblue2"))
+df <- gather(simulation, key = Compartment, value = count, c("SV", "IV", "P"))
+df$Compartment <- factor(df$Compartment, levels = c("SV", "IV", "P"))
+ggplot(df, aes(x = time, y=count, group=Compartment, color=Compartment)) + geom_line(size=1) + labs(x = "Time", y = "Individuals", color="Compartment") + thm
+df <- gather(simulation, key = Compartment, value = count, c("D1", "D2"))
+df$Compartment <- factor(df$Compartment, levels = c("D1", "D2"))
+ggplot(df, aes(x = time, y=count, group=Compartment, color=Compartment)) + geom_line(size=1) + labs(x = "Time", y = "Individuals", color="Compartment") + thm
+df <- gather(simulation, key = Compartment, value = count, c("V1", "V2"))
+df$Compartment <- factor(df$Compartment, levels = c("V1", "V2"))
+ggplot(df, aes(x = time, y=count, group=Compartment, color=Compartment)) + geom_line(size=1) + labs(x = "Time", y = "Individuals", color="Compartment") + thm
+```
+Only HH-transmissions in fictitious plots:
+```{r}
+parameters <- fictitous
+initials <- ivFictitous
+parameters$transHV <- 0
+parameters$transVH <- 0
+parameters$transVV <- 0
+parameters$transPH <- 0
+parameters$alphaP <- 0
+
+simulation <- as.data.table(
+  ode(func = model,
+      y = initials,
+      times = seq(1, 10, 0.1),
+      parms = parameters)
+)
+
+df <- gather(simulation, key = Compartment, value = count, c("S", "E", "I1", "I2","R"))
+df$Compartment <- factor(df$Compartment, levels = c("S", "E", "I1", "I2","R"))
+ggplot(df, aes(x = time, y=count, group=Compartment, color=Compartment)) + geom_line(size=1) + labs(x = "Time", y = "Individuals", color="Compartment") + thm + scale_color_manual(values = c("black","yellow3","orange2","tomato2","slateblue2"))
+df <- gather(simulation, key = Compartment, value = count, c("SV", "IV", "P"))
+df$Compartment <- factor(df$Compartment, levels = c("SV", "IV", "P"))
+ggplot(df, aes(x = time, y=count, group=Compartment, color=Compartment)) + geom_line(size=1) + labs(x = "Time", y = "Individuals", color="Compartment") + thm
+df <- gather(simulation, key = Compartment, value = count, c("D1", "D2"))
+df$Compartment <- factor(df$Compartment, levels = c("D1", "D2"))
+ggplot(df, aes(x = time, y=count, group=Compartment, color=Compartment)) + geom_line(size=1) + labs(x = "Time", y = "Individuals", color="Compartment") + thm
+df <- gather(simulation, key = Compartment, value = count, c("V1", "V2"))
+df$Compartment <- factor(df$Compartment, levels = c("V1", "V2"))
+ggplot(df, aes(x = time, y=count, group=Compartment, color=Compartment)) + geom_line(size=1) + labs(x = "Time", y = "Individuals", color="Compartment") + thm
+
+R0 <- R0HH(parameters)
+print(paste0("R_0=",R0))
+```
+No HH-transmissions in fictitious plots:
+```{r}
+parameters <- fictitous
+initials <- ivFictitous
+parameters$transHH <- 0
+
+simulation <- as.data.table(
+  ode(func = model,
+      y = initials,
+      times = seq(1, 10, 0.1),
+      parms = parameters)
+)
+
+df <- gather(simulation, key = Compartment, value = count, c("S", "E", "I1", "I2","R"))
+df$Compartment <- factor(df$Compartment, levels = c("S", "E", "I1", "I2","R"))
+ggplot(df, aes(x = time, y=count, group=Compartment, color=Compartment)) + geom_line(size=1) + labs(x = "Time", y = "Individuals", color="Compartment") + thm + scale_color_manual(values = c("black","yellow3","orange2","tomato2","slateblue2"))
+df <- gather(simulation, key = Compartment, value = count, c("SV", "IV", "P"))
+df$Compartment <- factor(df$Compartment, levels = c("SV", "IV", "P"))
+ggplot(df, aes(x = time, y=count, group=Compartment, color=Compartment)) + geom_line(size=1) + labs(x = "Time", y = "Individuals", color="Compartment") + thm
+df <- gather(simulation, key = Compartment, value = count, c("D1", "D2"))
+df$Compartment <- factor(df$Compartment, levels = c("D1", "D2"))
+ggplot(df, aes(x = time, y=count, group=Compartment, color=Compartment)) + geom_line(size=1) + labs(x = "Time", y = "Individuals", color="Compartment") + thm
+df <- gather(simulation, key = Compartment, value = count, c("V1", "V2"))
+df$Compartment <- factor(df$Compartment, levels = c("V1", "V2"))
+ggplot(df, aes(x = time, y=count, group=Compartment, color=Compartment)) + geom_line(size=1) + labs(x = "Time", y = "Individuals", color="Compartment") + thm
+```
+VV-transmissions in fictitious plots:
+```{r}
+parameters <- fictitous
+initials <- ivFictitous
+parameters$transHH <- 0
+parameters$transHV <- 0
+parameters$transPH <- 0
+parameters$alphaP <- 0
+
+simulation <- as.data.table(
+  ode(func = model,
+      y = initials,
+      times = seq(1, 10, 0.1),
+      parms = parameters)
+)
+
+df <- gather(simulation, key = Compartment, value = count, c("S", "E", "I1", "I2","R"))
+df$Compartment <- factor(df$Compartment, levels = c("S", "E", "I1", "I2","R"))
+ggplot(df, aes(x = time, y=count, group=Compartment, color=Compartment)) + geom_line(size=1) + labs(x = "Time", y = "Individuals", color="Compartment") + thm + scale_color_manual(values = c("black","yellow3","orange2","tomato2","slateblue2"))
+df <- gather(simulation, key = Compartment, value = count, c("SV", "IV", "P"))
+df$Compartment <- factor(df$Compartment, levels = c("SV", "IV", "P"))
+ggplot(df, aes(x = time, y=count, group=Compartment, color=Compartment)) + geom_line(size=1) + labs(x = "Time", y = "Individuals", color="Compartment") + thm
+df <- gather(simulation, key = Compartment, value = count, c("D1", "D2"))
+df$Compartment <- factor(df$Compartment, levels = c("D1", "D2"))
+ggplot(df, aes(x = time, y=count, group=Compartment, color=Compartment)) + geom_line(size=1) + labs(x = "Time", y = "Individuals", color="Compartment") + thm
+df <- gather(simulation, key = Compartment, value = count, c("V1", "V2"))
+df$Compartment <- factor(df$Compartment, levels = c("V1", "V2"))
+ggplot(df, aes(x = time, y=count, group=Compartment, color=Compartment)) + geom_line(size=1) + labs(x = "Time", y = "Individuals", color="Compartment") + thm
+
+print(paste0("R_0=",parameters$a18/parameters$muV))
+```
+
+Measles Pakistan plots as in [Memon2020]:
+```{r}
+parameters <- measlesPakistan
+initials <- ivMeaslesPakistan
+
+simulation <- as.data.table(
+  ode(func = model,
+      y = initials,
+      times = seq(1, 12, 0.1),
+      parms = parameters)
+)
+
+df <- gather(simulation, key = Compartment, value = count, c("E", "I1", "I2","R"))
+df$Compartment <- factor(df$Compartment, levels = c("E", "I1", "I2","R"))
+ggplot(df, aes(x = time, y=count, group=Compartment, color=Compartment)) + geom_line(size=1) + labs(x = "Month", y = "Individuals", color="Compartment") + thm + scale_color_manual(values = c("yellow3","orange2","tomato2","slateblue2"))
+df <- gather(simulation, key = Compartment, value = count, c("SV", "IV", "P"))
+df$Compartment <- factor(df$Compartment, levels = c("SV", "IV", "P"))
+ggplot(df, aes(x = time, y=count, group=Compartment, color=Compartment)) + geom_line(size=1) + labs(x = "Month", y = "Individuals", color="Compartment") + thm
+df <- gather(simulation, key = Compartment, value = count, c("D1", "D2"))
+df$Compartment <- factor(df$Compartment, levels = c("D1", "D2"))
+ggplot(df, aes(x = time, y=count, group=Compartment, color=Compartment)) + geom_line(size=1) + labs(x = "Month", y = "Individuals", color="Compartment") + thm
+df <- gather(simulation, key = Compartment, value = count, c("V1", "V2"))
+df$Compartment <- factor(df$Compartment, levels = c("V1", "V2"))
+ggplot(df, aes(x = time, y=count, group=Compartment, color=Compartment)) + geom_line(size=1) + labs(x = "Month", y = "Individuals", color="Compartment") + thm + scale_color_manual(values = c("springgreen3","black"))
+
+
+R0 <- R0HH(parameters)
+print(paste0("R_0=",R0))
+```
+Measles without vaccination:
+```{r}
+parameters <- measlesPakistan
+initials <- ivMeaslesPakistan
+
+parameters$a7 <- 0
+
+simulation <- as.data.table(
+  ode(func = model,
+      y = initials,
+      times = seq(1, 12, 0.1),
+      parms = parameters)
+)
+
+df <- gather(simulation, key = Compartment, value = count, c("S","E", "I1", "I2","R"))
+df$Compartment <- factor(df$Compartment, levels = c("S", "E", "I1", "I2","R"))
+ggplot(df, aes(x = time, y=count, group=Compartment, color=Compartment)) + geom_line(size=1) + labs(x = "Month", y = "Individuals", color="Compartment") + thm + scale_color_manual(values = c("black","yellow3","orange2","tomato2","slateblue2"))
+df <- gather(simulation, key = Compartment, value = count, c("SV", "IV", "P"))
+df$Compartment <- factor(df$Compartment, levels = c("SV", "IV", "P"))
+ggplot(df, aes(x = time, y=count, group=Compartment, color=Compartment)) + geom_line(size=1) + labs(x = "Month", y = "Individuals", color="Compartment") + thm
+df <- gather(simulation, key = Compartment, value = count, c("D1", "D2"))
+df$Compartment <- factor(df$Compartment, levels = c("D1", "D2"))
+ggplot(df, aes(x = time, y=count, group=Compartment, color=Compartment)) + geom_line(size=1) + labs(x = "Month", y = "Individuals", color="Compartment") + thm
+df <- gather(simulation, key = Compartment, value = count, c("V1", "V2"))
+df$Compartment <- factor(df$Compartment, levels = c("V1", "V2"))
+ggplot(df, aes(x = time, y=count, group=Compartment, color=Compartment)) + geom_line(size=1) + geom_line(y=0, color="springgreen3", size=1) + labs(x = "Month", y = "Individuals", color="Compartment") + thm + scale_color_manual(values = c("springgreen3","black"))
+
+
+R0 <- R0HH(parameters)
+print(paste0("R_0=",R0))
+```
