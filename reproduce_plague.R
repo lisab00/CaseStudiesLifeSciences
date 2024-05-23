@@ -5,17 +5,19 @@
 
 #load required packages
 library(deSolve)
+library(tidyverse)
 
 #set working directory
 setwd("C:/Users/lihel/Documents/master/so24/case_studies/CaseStudiesLifeSciences/")
-df_plague_relevant <- read.csv(file = "data_plague_relevant.csv")
+df_plague <- read.csv(file = "data_plague_2017_madagascar.csv")
+df_plague_relevant <- read.csv(file="data_plague_relevant.csv")
 
 #set params, state0 and time scale
 #copy estimated parms from paper
 N <- 25570895
 p <- 1e-4 #Sb = p*N, proportion of N exposed to ratfleas
 
-parms <- c(alpha=1.9*10e-3, beta=2.23, gammab=0.23, gammap=0.29, deltab=0.26,
+parms <- c(alpha=1.9e-3, beta=2.23, gammab=0.23, gammap=0.29, deltab=0.26,
            deltap=0.34, epsilon=0.03)
 times <- df_plague_relevant$time
 state0 <- c(Sb=N*p, Sp=N*(1-p), Eb=0, Ep=0, Ib=1, Ip=1)
@@ -50,3 +52,11 @@ model <- function (time, state, parms, ...) {
 
 #simulation
 out <- ode(state0, times , model, parms)
+
+#plot
+plot(out)
+
+#I1=Ib+Ip
+I1 <- out[,"Ib"]+out[,"Ip"]
+plot(df_plague_relevant)
+lines(I1)
