@@ -16,6 +16,7 @@ text(6, max(df_noro$I1), label ="Health Intervention", pos=4, col="red")
 
 
 ## functions for health interventions
+# cleaning measures at time t=6 reduce virus appearance in water to effP
 signalP <- function(t, effP){
   if (t < 6){
     return(1)
@@ -38,22 +39,22 @@ model <- function(time, state, parms, signalP, ...){
 }
 
 ## set (fixed) parameters
-fI1 <- 1                                # only 1 stage of infections
-a2 <- 1                                 # cf omega (W)
-a6 <- 0.3*0.03846 + 0.7*0.3333          # recovery rate weighted (symp, asymp)
-mu_p <- 0.1                             # cf epsilon
+fI1 <- 1                        # only 1 stage of infections
+a2 <- 1                         # cf omega (W)
+a6 <- 0.3*0.03846 + 0.7*0.3333  # recovery rate weighted (0.3*symptomatic+0.7*asymptomatic)
+mu_p <- 0.1                     # cf epsilon
 
-# rmk: this leaves parms c(alpha_p, a1, fP, effP) to be fitted
+# rmk: this leaves parms c(a1, alpha_p, fP, effP) to be fitted
 
 # state0
-N <- 1751
+N <- 1751 
 state0 <- c(S=N-df_noro$I1[1],
             E=df_noro$I1[1]/(1-0.3), #0.3 is proportion asymptomatic
             I1=df_noro$I1[1],
             R=0, P=0)
 
 # initial parms
-parms <- c(a1=0.1, fP=0.3, alpha_p=0.3, effP=0.8)
+parms <- c(a1=0.1, fP=0.3, alpha_p=0.3, effP=0.01)
 
 ## simulation and plot
 out <- ode(state0, df_noro$time, model, parms, signalP=signalP)
