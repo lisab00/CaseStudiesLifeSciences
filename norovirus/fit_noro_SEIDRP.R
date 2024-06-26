@@ -50,14 +50,14 @@ model <- function(time, state, parms, signalP, signalD, ...){
     dE <- a1 * (fI1 * I1 + fP * P) / N * S - a2 * E
     dI1 <- a2 * E - ((1-signalD) * a6 + signalD * a13) * I1
     dD1 <- signalD * a13 * I1 - a15 * D1
-    dR <- a6 * I1 + a15 * D1
+    dR <- (1-signalD) * a6 * I1 + a15 * D1
     dP <- alpha_p * signalP * fI1 * I1 - mu_p * P
     list(c(dS, dE, dI1, dD1, dR, dP))
   })
 }
 
 ## set (fixed) parameters
-fI1 <- 1                        # only 1 stage of infections
+fI1 <- 1                        # only 1 stage of infection
 a2 <- 1                         # cf omega (W)
 a6 <- 0.3*0.03846 + 0.7*0.3333  # recovery rate weighted (0.3*symptomatic+0.7*asymptomatic)
 a13 <- 2                        # isolation rate
@@ -74,7 +74,7 @@ state0 <- c(S=N-df_noro$I1[1],
             D1=0, R=0, P=0)
 
 # initial parms
-parms <- c(a1=0.1, fP=0.3, alpha_p=0.3, effP=0.2, q=1)
+parms <- c(a1=0.4, fP=0.1, alpha_p=0.3, effP=0.1, q=0.6)
 
 ## simulation and plot
 out <- ode(state0, df_noro$time, model, parms, signalP=signalP, signalD=signalD)
@@ -83,8 +83,10 @@ modCost(model = out[ ,c("time","I1")], obs = df_noro, method = "Marq")
 plot(out)
 df_out <- as.data.frame(out)
 
+# rmk: the data resembles total of infected -> plot I1 + D1
+
 ggplot() +
-  geom_line(data = df_out, aes(x = time, y = I1), color = 'blue', size = 1) +
+  geom_line(data = df_out, aes(x = time, y = I1+D1), color = 'blue', size = 1) +
   geom_point(data = df_noro, aes(x = time, y = I1), color = 'red', size = 2) +
   labs(title = 'Infected', x = 'Days', y = 'Number of Individuals')
 
@@ -92,12 +94,12 @@ ggplot() +
 ## define cost
 cost <- function(p) {
   out <- ode(state0, df_noro$time, model, p, signalP=signalP, signalD=signalD)
-  modCost(model = out[ ,c("time","I1")], obs = df_noro, method = "Marq")
+  modCost(model = out[ , c("time","I1")] + out[ , c("time","D1")], obs = df_noro, method = "Marq")
 }
 
 
 ## fitting
-fit <- modFit(f=cost, p=parms, lower=c(0,0,0,0), upper=c(1,1,1,1))
+fit <- modFit(f=cost, p=parms, lower=c(0,0,0,0,0), upper=c(1,1,1,1,1))
 summary(fit)
 coef(fit)
 
@@ -108,6 +110,7 @@ out_fit <- ode(state0, df_noro$time, model, pars_est, signalP=signalP, signalD=s
 df_out_fit <- as.data.frame(out_fit)
 
 ggplot() +
-  geom_line(data = df_out_fit, aes(x = time, y = I1), color = 'blue', size = 1) +
+  geom_line(data = df_out_fit, aes(x = time, y = I1+D1), color = 'blue', size = 1) +
   geom_point(data = df_noro, aes(x = time, y = I1), color = 'red', size = 2) +
   labs(title = 'Infected', x = 'Days', y = 'Number of Individuals')
+
