@@ -1,4 +1,4 @@
-#setwd("C:/Users/lihel/Documents/master/so24/case_studies/CaseStudiesLifeSciences/")
+setwd("C:/Users/lihel/Documents/master/so24/case_studies/CaseStudiesLifeSciences/")
 
 library(readxl)
 library(tidyverse)
@@ -10,16 +10,28 @@ library(ggplot2)
 # Load Data
 # consider outbreak 11 (with pathogen compartment)
 df_noro <- as.data.frame(read_excel("norovirus/relevantData.xlsx", sheet="outbreak11"))
-plot(df_noro)
+plot(df_noro$I1)
 abline(v=6, col="red")
 text(6, max(df_noro$I1), label ="Health Intervention", pos=4, col="red")
 
+# consider outbreak 2
+'df_noro <- as.data.frame(read_excel("norovirus/relevantData.xlsx", sheet="outbreak2"))
+plot(df_noro)
+abline(v=4, col="red")
+text(4, max(df_noro$I1), label ="Health Intervention", pos=4, col="red")'
 
+
+# add column with weights
+'df_noro <- mutate(df_noro, weights_inv=1/df_noro$I1)
+df_noro$weights_inv[is.infinite(df_noro$weights_inv)] <- 1  # replace Inf values
+'
 ## functions for health interventions
+ti <- 6   # time of health interventions, outbreak11
+#ti <- 4    # outbreak2
 
-# cleaning measures at time t=6 reduce virus appearance in water to effP
+# cleaning measures at time t=ti reduce virus appearance in water to effP
 signalP <- function(t, effP){
-  if (t < 6){
+  if (t < ti){
     return(1)
   } else {
     return(effP)
@@ -28,7 +40,7 @@ signalP <- function(t, effP){
 
 # quarantine measures, signalD resembles the isolation coefficient q
 signalD <- function(t, q){
-  if (t < 6){
+  if (t < ti){
     return(0)
   } else {
     return(q)
@@ -43,8 +55,8 @@ legend("topright", legend=c("signalP", "signalD"), col=c("black", "red"), lwd=2)
 
 ## set up model
 model <- function(time, state, parms, signalP, signalD, ...){
-  signalP <- signalP(time, parms["effP"])
-  signalD <- signalD(time, parms["q"])
+  signalP <- signalP(time, effP)
+  signalD <- signalD(time, q)
   with(as.list(c(parms, state)), {
     dS <- -a1 * (fI1 * I1 + fP * P) / N * S
     dE <- a1 * (fI1 * I1 + fP * P) / N * S - a2 * E
@@ -65,23 +77,25 @@ a15 <- 0.3333                   # recovery rate of detected (only symptomatic)
 mu_p <- 0.1                     # cf epsilon
 q <- 0.6                        # all infected are sent to quarantine (0.6)
 effP <- 0.1                     # 30% of pathogen gets into water after disinfection (0.1)
+alpha_p <- 0.9
 
-# rmk: this leaves parms c(fI1, alpha_p, fP,) to be fitted
+# rmk: this leaves parms c(fI1, fP) to be fitted
 
 # state0
-N <- 1751 
+N <- 1751    # outbreak11
+#N <- 14500    # outbreak2
 state0 <- c(S=N-df_noro$I1[1],
-            E=df_noro$I1[1]/(1-0.3), #0.3 is proportion asymptomatic
+            E=df_noro$I1[1]/(1-0.3), # 0.3 is proportion asymptomatic
             I1=df_noro$I1[1],
             D1=0, R=0, P=0)
 
 # initial parms
-parms <- c(fI1=0.8, fP=0.1, alpha_p=0.3, effP=effP, q=q)
+parms <- c(fI1=0.9
+           , fP=0.5
+           )
 
 ## simulation and plot
 out <- ode(state0, df_noro$time, model, parms, signalP=signalP, signalD=signalD)
-modCost(model = out[ ,c("time","I1")] + out[ ,c("time","D1")], obs = df_noro, method = "Marq")
-
 plot(out)
 df_out <- as.data.frame(out)
 
@@ -94,12 +108,17 @@ ggplot() +
 ## define cost
 cost <- function(p) {
   out <- ode(state0, df_noro$time, model, p, signalP=signalP, signalD=signalD)
-  modCost(model = out[ , c("time","I1")], obs = df_noro, method = "Marq")
+  modCost(model = out[ , c("time","I1")]
+          , obs = df_noro, method = "Marq"
+          #, err="weights_inv"
+          )
 }
 
 
 ## fitting
-fit <- modFit(f=cost, p=parms, lower=c(0,0,0,0,0), upper=c(1,1,1,1,1))
+fit <- modFit(f=cost, p=parms, lower=c(0,0)
+              , upper=c(1,1)
+              )
 summary(fit)
 coef(fit)
 
@@ -107,7 +126,7 @@ coef(fit)
 ## plot fitted model and data
 pars_est <- coef(fit)
 out_fit <- ode(state0, df_noro$time, model, pars_est, signalP=signalP, signalD=signalD)
-plot(out_fit)
+#plot(out_fit)
 df_out_fit <- as.data.frame(out_fit)
 
 ggplot() +
