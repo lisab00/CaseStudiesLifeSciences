@@ -1,4 +1,4 @@
-setwd("C:/Users/lihel/Documents/master/so24/case_studies/CaseStudiesLifeSciences/")
+#setwd("C:/Users/lihel/Documents/master/so24/case_studies/CaseStudiesLifeSciences/")
 
 library(readxl)
 library(tidyverse)
