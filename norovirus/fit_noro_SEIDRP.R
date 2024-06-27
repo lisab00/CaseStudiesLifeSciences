@@ -37,14 +37,14 @@ signalD <- function(t, q){
 
 # plot intervention functions
 t <- df_noro$time
-plot(t, sapply(t, effP=0.2, signalP), ylim=c(0,1), type="l")
-lines(t, sapply(t, q=0.8, signalD), col="red")
+plot(t, sapply(t, effP=0.3, signalP), ylim=c(0,1), type="l")
+lines(t, sapply(t, q=1, signalD), col="red")
 legend("topright", legend=c("signalP", "signalD"), col=c("black", "red"), lwd=2)
 
 ## set up model
 model <- function(time, state, parms, signalP, signalD, ...){
   signalP <- signalP(time, parms["effP"])
-  signalD <- signalP(time, parms["q"])
+  signalD <- signalD(time, parms["q"])
   with(as.list(c(parms, state)), {
     dS <- -a1 * (fI1 * I1 + fP * P) / N * S
     dE <- a1 * (fI1 * I1 + fP * P) / N * S - a2 * E
@@ -57,14 +57,16 @@ model <- function(time, state, parms, signalP, signalD, ...){
 }
 
 ## set (fixed) parameters
-fI1 <- 1                        # only 1 stage of infection
+a1 <- 1                        
 a2 <- 1                         # cf omega (W)
 a6 <- 0.3*0.03846 + 0.7*0.3333  # recovery rate weighted (0.3*symptomatic+0.7*asymptomatic)
 a13 <- 2                        # isolation rate
-a15 <- 0.3333                   # recovery rate of detected (only sympomatic)
+a15 <- 0.3333                   # recovery rate of detected (only symptomatic)
 mu_p <- 0.1                     # cf epsilon
+q <- 0.6                        # all infected are sent to quarantine (0.6)
+effP <- 0.1                     # 30% of pathogen gets into water after disinfection (0.1)
 
-# rmk: this leaves parms c(a1, alpha_p, fP, effP, q) to be fitted
+# rmk: this leaves parms c(fI1, alpha_p, fP,) to be fitted
 
 # state0
 N <- 1751 
@@ -74,19 +76,17 @@ state0 <- c(S=N-df_noro$I1[1],
             D1=0, R=0, P=0)
 
 # initial parms
-parms <- c(a1=0.4, fP=0.1, alpha_p=0.3, effP=0.1, q=0.6)
+parms <- c(fI1=0.8, fP=0.1, alpha_p=0.3, effP=effP, q=q)
 
 ## simulation and plot
 out <- ode(state0, df_noro$time, model, parms, signalP=signalP, signalD=signalD)
-modCost(model = out[ ,c("time","I1")], obs = df_noro, method = "Marq")
+modCost(model = out[ ,c("time","I1")] + out[ ,c("time","D1")], obs = df_noro, method = "Marq")
 
 plot(out)
 df_out <- as.data.frame(out)
 
-# rmk: the data resembles total of infected -> plot I1 + D1
-
 ggplot() +
-  geom_line(data = df_out, aes(x = time, y = I1+D1), color = 'blue', size = 1) +
+  geom_line(data = df_out, aes(x = time, y = I1), color = 'blue', size = 1) +
   geom_point(data = df_noro, aes(x = time, y = I1), color = 'red', size = 2) +
   labs(title = 'Infected', x = 'Days', y = 'Number of Individuals')
 
@@ -94,7 +94,7 @@ ggplot() +
 ## define cost
 cost <- function(p) {
   out <- ode(state0, df_noro$time, model, p, signalP=signalP, signalD=signalD)
-  modCost(model = out[ , c("time","I1")] + out[ , c("time","D1")], obs = df_noro, method = "Marq")
+  modCost(model = out[ , c("time","I1")], obs = df_noro, method = "Marq")
 }
 
 
@@ -107,10 +107,11 @@ coef(fit)
 ## plot fitted model and data
 pars_est <- coef(fit)
 out_fit <- ode(state0, df_noro$time, model, pars_est, signalP=signalP, signalD=signalD)
+plot(out_fit)
 df_out_fit <- as.data.frame(out_fit)
 
 ggplot() +
-  geom_line(data = df_out_fit, aes(x = time, y = I1+D1), color = 'blue', size = 1) +
+  geom_line(data = df_out_fit, aes(x = time, y = I1), color = 'blue', size = 1) +
   geom_point(data = df_noro, aes(x = time, y = I1), color = 'red', size = 2) +
   labs(title = 'Infected', x = 'Days', y = 'Number of Individuals')
 
