@@ -8,27 +8,26 @@ library(ggplot2)
 
 # =============================================================================
 # Load Data
-# consider outbreak 11 (with pathogen compartment)
-df_noro <- as.data.frame(read_excel("norovirus/relevantData.xlsx", sheet="outbreak11"))
+
+#ti <- 6   # time of health interventions, outbreak11
+#ti <- 4    # outbreak2
+ti <- 3    # outbreak6
+
+sheet <- "outbreak6"    # adapt to correct outbreak
+
+# consider outbreaks with pathogen compartment
+df_noro <- as.data.frame(read_excel("norovirus/relevantData.xlsx", sheet=sheet))
 plot(df_noro$I1)
-abline(v=6, col="red")
-text(6, max(df_noro$I1), label ="Health Intervention", pos=4, col="red")
-
-# consider outbreak 2
-'df_noro <- as.data.frame(read_excel("norovirus/relevantData.xlsx", sheet="outbreak2"))
-plot(df_noro)
-abline(v=4, col="red")
-text(4, max(df_noro$I1), label ="Health Intervention", pos=4, col="red")'
+abline(v=ti, col="red")
+text(ti, max(df_noro$I1), label ="Health Intervention", pos=4, col="red")
 
 
-# add column with weights
+# add column with weights to df
 'df_noro <- mutate(df_noro, weights_inv=1/df_noro$I1)
 df_noro$weights_inv[is.infinite(df_noro$weights_inv)] <- 1  # replace Inf values
 '
-## functions for health interventions
-ti <- 6   # time of health interventions, outbreak11
-#ti <- 4    # outbreak2
 
+## functions for health interventions
 # cleaning measures at time t=ti reduce virus appearance in water to effP
 signalP <- function(t, effP){
   if (t < ti){
@@ -47,11 +46,13 @@ signalD <- function(t, q){
   }
 }
 
+
 # plot intervention functions
 t <- df_noro$time
 plot(t, sapply(t, effP=0.3, signalP), ylim=c(0,1), type="l")
 lines(t, sapply(t, q=1, signalD), col="red")
 legend("topright", legend=c("signalP", "signalD"), col=c("black", "red"), lwd=2)
+
 
 ## set up model
 model <- function(time, state, parms, signalP, signalD, ...){
@@ -75,23 +76,26 @@ a6 <- 0.3*0.03846 + 0.7*0.3333  # recovery rate weighted (0.3*symptomatic+0.7*as
 a13 <- 2                        # isolation rate
 a15 <- 0.3333                   # recovery rate of detected (only symptomatic)
 mu_p <- 0.1                     # cf epsilon
-q <- 0.6                        # all infected are sent to quarantine (0.6)
+q <- 1                          # all infected are sent to quarantine (0.6)
 effP <- 0.1                     # 30% of pathogen gets into water after disinfection (0.1)
-alpha_p <- 0.9
+alpha_p <- 1
+#fP <- 1
 
 # rmk: this leaves parms c(fI1, fP) to be fitted
 
 # state0
-N <- 1751    # outbreak11
-#N <- 14500    # outbreak2
+#N <- 1751      # outbreak11
+#N <- 14500     # outbreak2
+N <- 3142      # outbreak6
+
 state0 <- c(S=N-df_noro$I1[1],
             E=df_noro$I1[1]/(1-0.3), # 0.3 is proportion asymptomatic
             I1=df_noro$I1[1],
             D1=0, R=0, P=0)
 
 # initial parms
-parms <- c(fI1=0.9
-           , fP=0.5
+parms <- c(fI1=0.8
+           , fP=0.9
            )
 
 ## simulation and plot
