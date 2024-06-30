@@ -69,16 +69,18 @@ model <- function(time, state, parms, signalP, signalD, ...){
   })
 }
 
-## set (fixed) parameters
+## set fixed parameters from paper
 a1 <- 1                        
 a2 <- 1                         # cf omega (W)
 a6 <- 0.3*0.03846 + 0.7*0.3333  # recovery rate weighted (0.3*symptomatic+0.7*asymptomatic)
 a13 <- 2                        # isolation rate
 a15 <- 0.3333                   # recovery rate of detected (only symptomatic)
 mu_p <- 0.1                     # cf epsilon
-q <- 1                          # all infected are sent to quarantine (0.6)
-effP <- 0.1                     # 30% of pathogen gets into water after disinfection (0.1)
-alpha_p <- 1
+
+# fix more parameters (can be varied)
+q <- 1                          # rate of infected being sent to quarantine (0.6)
+effP <- 0.1                     # fraction of pathogen getting into water after disinfection (0.1)
+alpha_p <- 1                    # rate of pathogen appearance in water
 #fP <- 1
 
 # rmk: this leaves parms c(fI1, fP) to be fitted
