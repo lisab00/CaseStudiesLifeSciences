@@ -9,11 +9,11 @@ library(ggplot2)
 # =============================================================================
 # Load Data
 
-#ti <- 6   # time of health interventions, outbreak11
+ti <- 6   # time of health interventions, outbreak11
 #ti <- 4    # outbreak2
-ti <- 3    # outbreak6
+#ti <- 3    # outbreak6
 
-sheet <- "outbreak6"    # adapt to correct outbreak
+sheet <- "outbreak11"    # adapt to correct outbreak
 
 # consider outbreaks with pathogen compartment
 df_noro <- as.data.frame(read_excel("norovirus/relevantData.xlsx", sheet=sheet))
@@ -86,25 +86,26 @@ alpha_p <- 1                    # rate of pathogen appearance in water
 # rmk: this leaves parms c(fI1, fP) to be fitted
 
 # state0
-#N <- 1751      # outbreak11
+N <- 1751      # outbreak11
 #N <- 14500     # outbreak2
-N <- 3142      # outbreak6
+#N <- 3142      # outbreak6
 
 state0 <- c(S=N-df_noro$I1[1],
             E=df_noro$I1[1]/(1-0.3), # 0.3 is proportion asymptomatic
+            #E <- 8,                  # try different E0
             I1=df_noro$I1[1],
             D1=0, R=0, P=0)
 
 # initial parms
-parms <- c(fI1=0.8
-           , fP=0.9
+parms <- c(fI1=0.6          # 0.6 (outb11)
+           , fP=0.9         # 0.9 (outb11)
            )
 
 ## simulation and plot
-out <- ode(state0, df_noro$time, model, parms, signalP=signalP, signalD=signalD)
+timeline <- seq(df_noro$time[1], df_noro$time[length(df_noro$time)], 0.001)
+out <- ode(state0, timeline, model, parms, signalP=signalP, signalD=signalD)
 plot(out)
 df_out <- as.data.frame(out)
-
 ggplot() +
   geom_line(data = df_out, aes(x = time, y = I1), color = 'blue', size = 1) +
   geom_point(data = df_noro, aes(x = time, y = I1), color = 'red', size = 2) +
@@ -113,7 +114,7 @@ ggplot() +
 
 ## define cost
 cost <- function(p) {
-  out <- ode(state0, df_noro$time, model, p, signalP=signalP, signalD=signalD)
+  out <- ode(state0, timeline, model, p, signalP=signalP, signalD=signalD)
   modCost(model = out[ , c("time","I1")]
           , obs = df_noro, method = "Marq"
           #, err="weights_inv"
@@ -131,12 +132,11 @@ coef(fit)
 
 ## plot fitted model and data
 pars_est <- coef(fit)
-out_fit <- ode(state0, df_noro$time, model, pars_est, signalP=signalP, signalD=signalD)
+out_fit <- ode(state0, timeline, model, pars_est, signalP=signalP, signalD=signalD)
 #plot(out_fit)
 df_out_fit <- as.data.frame(out_fit)
-
 ggplot() +
   geom_line(data = df_out_fit, aes(x = time, y = I1), color = 'blue', size = 1) +
   geom_point(data = df_noro, aes(x = time, y = I1), color = 'red', size = 2) +
-  labs(title = 'Infected', x = 'Days', y = 'Number of Individuals')
+  labs(title = 'Infected', x = 'Days', y = 'Number of Individuals') 
 
