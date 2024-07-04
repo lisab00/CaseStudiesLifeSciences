@@ -13,7 +13,7 @@ source('norovirus_plots.R')
 set.seed(123)
 
 ## load data of respective outbreak (outbreak11)
-df_noro <- as.data.frame(read_excel("relevantData.xlsx", sheet="outbreak11"))
+df_noro <- as.data.frame(read_excel("data/relevantData.xlsx", sheet="outbreak11"))
 timeline <- seq(df_noro$time[1], df_noro$time[length(df_noro$time)], 0.001)
 ti <- 6
 

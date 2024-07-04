@@ -7,7 +7,7 @@ This script plots all the functions needed for the norovirus modelling.
 library(ggplot2)
 library(readxl)
 source('norovirus_model_definition.R')
-df_noro <- as.data.frame(read_excel("relevantData.xlsx", sheet="outbreak11"))
+df_noro <- as.data.frame(read_excel("data/relevantData.xlsx", sheet="outbreak11"))
 ti <- 6
 
 
