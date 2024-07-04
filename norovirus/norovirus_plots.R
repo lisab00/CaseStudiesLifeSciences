@@ -1,5 +1,5 @@
 '
-This script plots all the functions needed for the norovirus modelling.
+This script contains all plots needed for the norovirus modelling.
 '
 
 
@@ -31,7 +31,6 @@ df_signals <- data.frame(
   signalD = sapply(t, signalD, ti = ti, q = 1)
 )
 
-
 # plot for signalD
 ggplot(df_signals, aes(x = t)) +
   geom_line(aes(y = signalD), size = 1, col="lightseagreen") +
@@ -42,7 +41,6 @@ ggplot(df_signals, aes(x = t)) +
   scale_x_continuous(breaks = seq(min(df_noro$time), max(df_noro$time), by = 1)) +
   theme_gray() +
   ylim(0, 1)
-
 
 #plot for signalP
 ggplot(df_signals, aes(x = t)) +
