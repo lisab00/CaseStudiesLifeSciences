@@ -1,14 +1,18 @@
-setwd("C:/Users/lihel/Documents/master/so24/case_studies/CaseStudiesLifeSciences/")
+setwd("C:/Users/lihel/Documents/master/so24/case_studies/CaseStudiesLifeSciences/norovirus")
 
+'
+This code creates the model for the norovirus outbreak
+'
+
+# Load required packages
 library(readxl)
 library(tidyverse)
 library(deSolve)
 library(FME)
 library(ggplot2)
 
-# =============================================================================
-# Load Data
 
+# Load Data
 ti <- 6   # time of health interventions, outbreak11
 #ti <- 4    # outbreak2
 #ti <- 3    # outbreak6
@@ -33,7 +37,7 @@ signalP <- function(t, effP){
   if (t < ti){
     return(1)
   } else {
-    return(effP)
+    return(1-effP)
   }
 }
 
@@ -49,7 +53,7 @@ signalD <- function(t, q){
 
 # plot intervention functions
 t <- df_noro$time
-plot(t, sapply(t, effP=0.3, signalP), ylim=c(0,1), type="l")
+plot(t, sapply(t, effP=0.9, signalP), ylim=c(0,1), type="l")
 lines(t, sapply(t, q=1, signalD), col="red")
 legend("topright", legend=c("signalP", "signalD"), col=c("black", "red"), lwd=2)
 
@@ -70,7 +74,6 @@ model <- function(time, state, parms, signalP, signalD, ...){
 }
 
 ## set fixed parameters from paper
-a1 <- 1                        
 a2 <- 1                         # cf omega (W)
 a6 <- 0.3*0.03846 + 0.7*0.3333  # recovery rate weighted (0.3*symptomatic+0.7*asymptomatic)
 a13 <- 2                        # isolation rate
@@ -78,9 +81,10 @@ a15 <- 0.3333                   # recovery rate of detected (only symptomatic)
 mu_p <- 0.1                     # cf epsilon
 
 # fix more parameters (can be varied)
+a1 <- 1.2
 q <- 1                          # rate of infected being sent to quarantine (0.6)
-effP <- 0.1                     # fraction of pathogen getting into water after disinfection (0.1)
-alpha_p <- 1                    # rate of pathogen appearance in water
+effP <- 0.7                     # efficiency of cleaning measures (0.9)
+alpha_p <- 0.6                  # rate of pathogen appearance in water
 #fP <- 1
 
 # rmk: this leaves parms c(fI1, fP) to be fitted
@@ -91,14 +95,14 @@ N <- 1751      # outbreak11
 #N <- 3142      # outbreak6
 
 state0 <- c(S=N-df_noro$I1[1],
-            E=df_noro$I1[1]/(1-0.3), # 0.3 is proportion asymptomatic
-            #E <- 8,                  # try different E0
+            #E=df_noro$I1[1]/(1-0.3), # 0.3 is proportion asymptomatic
+            E <- 8,                  # try different E0
             I1=df_noro$I1[1],
             D1=0, R=0, P=0)
 
 # initial parms
 parms <- c(fI1=0.6          # 0.6 (outb11)
-           , fP=0.9         # 0.9 (outb11)
+           , fP=0.8         # 0.9 (outb11)
            )
 
 ## simulation and plot
@@ -124,19 +128,22 @@ cost <- function(p) {
 
 ## fitting
 fit <- modFit(f=cost, p=parms, lower=c(0,0)
-              , upper=c(1,1)
+              #, upper=c(1,1)
               )
-summary(fit)
 coef(fit)
-
 
 ## plot fitted model and data
 pars_est <- coef(fit)
 out_fit <- ode(state0, timeline, model, pars_est, signalP=signalP, signalD=signalD)
+#cost_fit <- modCost(model=out_fit[ , c("time", "I1")], obs = df_noro, method = "Marq")
 #plot(out_fit)
 df_out_fit <- as.data.frame(out_fit)
 ggplot() +
   geom_line(data = df_out_fit, aes(x = time, y = I1), color = 'blue', size = 1) +
   geom_point(data = df_noro, aes(x = time, y = I1), color = 'red', size = 2) +
   labs(title = 'Infected', x = 'Days', y = 'Number of Individuals') 
+  #annotate("text", x=10, y=33,
+           #label=paste0("fitted: fI1: ", round(coef(fit)[[1]],2), ", fP: ", round(coef(fit)[[2]]), 2)) +
+  #annotate("text", x=9, y=28,
+           #label=paste0("initial: fI1: 0.8, fP: 0.9, a1: 1.2"))
 
