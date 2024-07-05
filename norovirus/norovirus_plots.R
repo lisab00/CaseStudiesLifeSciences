@@ -13,14 +13,22 @@ ti <- 6
 
 ## Plot the relevant data set
 ggplot(df_noro, aes(x = time, y = I1)) +
-  geom_vline(xintercept = ti, color = 'black', linetype='dashed', size=1) + 
-  geom_point(color = 'lightseagreen', size = 3) +  
+  geom_vline(xintercept = ti, color = 'black', linetype='dashed', size=2) + 
+  geom_point(color = 'lightseagreen', size = 4) +  
   annotate("text", x = ti, y = max(df_noro$I1), label = "Intervention", 
-           color = "black", hjust = -0.1, vjust = 1.5, size = 5) +  
+           color = "black", hjust = -0.1, vjust = 1.5, size = 6) +  
   labs(title = 'Norovirus outbreak data',
        x = 'Days since outbreak', y = 'Number of newly infected') +
   scale_x_continuous(breaks = seq(min(df_noro$time), max(df_noro$time), by = 1)) +
-  theme_gray()
+  theme_gray() +
+  theme(
+    plot.title = element_text(size = 20, face = "bold"),  # Title text size
+    axis.title.x = element_text(size = 16),  # X-axis title text size
+    axis.title.y = element_text(size = 16),  # Y-axis title text size
+    axis.text.x = element_text(size = 14),  # X-axis text size
+    axis.text.y = element_text(size = 14)   # Y-axis text size
+  )
+
 
 
 ## plot intervention functions
@@ -33,36 +41,57 @@ df_signals <- data.frame(
 
 # plot for signalD
 ggplot(df_signals, aes(x = t)) +
-  geom_line(aes(y = signalD), size = 1, col="lightseagreen") +
-  geom_vline(xintercept = ti, color = 'black', linetype='dashed', size=1) +
+  geom_line(aes(y = signalD), size = 2, col="lightseagreen") +
+  geom_vline(xintercept = ti, color = 'black', linetype='dashed', size=2) +
   annotate("text", x = ti, y = 1, label = "Health intervention", 
-           color = "black", hjust = -0.1, vjust = 1.5) +  
+           color = "black", hjust = -0.1, vjust = 1.5, size=6) +  
   labs(title = 'Intervention function for D1 compartment', x = 'Days since outbreak') +
   scale_x_continuous(breaks = seq(min(df_noro$time), max(df_noro$time), by = 1)) +
   theme_gray() +
-  ylim(0, 1)
+  ylim(0, 1) +
+  theme(
+    plot.title = element_text(size = 20, face = "bold"),  # Title text size
+    axis.title.x = element_text(size = 16),  # X-axis title text size
+    axis.title.y = element_text(size = 16),  # Y-axis title text size
+    axis.text.x = element_text(size = 14),  # X-axis text size
+    axis.text.y = element_text(size = 14)   # Y-axis text size
+  )
 
 #plot for signalP
 ggplot(df_signals, aes(x = t)) +
-  geom_line(aes(y = signalP), size = 1, col="lightseagreen") +
-  geom_vline(xintercept = ti, color = 'black', linetype='dashed', size=1) +
+  geom_line(aes(y = signalP), size = 2, col="lightseagreen") +
+  geom_vline(xintercept = ti, color = 'black', linetype='dashed', size=2) +
   annotate("text", x = ti, y = 1, label = "Health intervention", 
-           color = "black", hjust = -0.1, vjust = 1.5) +  
+           color = "black", hjust = -0.1, vjust = 1.5, size=6) +  
   labs(title = 'Intervention function for P compartment', x = 'Days since outbreak') +
   scale_x_continuous(breaks = seq(min(df_noro$time), max(df_noro$time), by = 1)) +
   theme_gray() +
-  ylim(0, 1)
+  ylim(0, 1)  +
+  theme(
+    plot.title = element_text(size = 20, face = "bold"),  # Title text size
+    axis.title.x = element_text(size = 16),  # X-axis title text size
+    axis.title.y = element_text(size = 16),  # Y-axis title text size
+    axis.text.x = element_text(size = 14),  # X-axis text size
+    axis.text.y = element_text(size = 14)   # Y-axis text size
+  )
 
 
 ## plot model simulation against data
 plot_against_data <- function(df_obs, df_out_fit){
   ggplot() +
-    geom_line(data = df_out_fit, aes(x = time, y = I1), color = 'black', size = 1) +
-    geom_point(data = df_noro, aes(x = time, y = I1), color = 'lightseagreen', size = 2) +
+    geom_line(data = df_out_fit, aes(x = time, y = I1), color = 'black', size = 2) +
+    geom_point(data = df_noro, aes(x = time, y = I1), color = 'lightseagreen', size = 4) +
     labs(title = 'Fitted curve to Norovirus outbreak',
          x = 'Days since outbreak', y = 'Number of newly infected') +
     scale_x_continuous(breaks = seq(min(df_noro$time), max(df_noro$time), by = 1)) +
-    theme_gray()
+    theme_gray()  +
+    theme(
+      plot.title = element_text(size = 20, face = "bold"),  # Title text size
+      axis.title.x = element_text(size = 16),  # X-axis title text size
+      axis.title.y = element_text(size = 16),  # Y-axis title text size
+      axis.text.x = element_text(size = 14),  # X-axis text size
+      axis.text.y = element_text(size = 14)   # Y-axis text size
+    )
 }
 
 
