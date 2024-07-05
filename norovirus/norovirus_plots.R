@@ -14,9 +14,9 @@ ti <- 6
 ## Plot the relevant data set
 ggplot(df_noro, aes(x = time, y = I1)) +
   geom_vline(xintercept = ti, color = 'black', linetype='dashed', size=1) + 
-  geom_point(color = 'lightseagreen', size = 2) +  
+  geom_point(color = 'lightseagreen', size = 3) +  
   annotate("text", x = ti, y = max(df_noro$I1), label = "Intervention", 
-           color = "black", hjust = -0.1, vjust = 1.5) +  
+           color = "black", hjust = -0.1, vjust = 1.5, size = 5) +  
   labs(title = 'Norovirus outbreak data',
        x = 'Days since outbreak', y = 'Number of newly infected') +
   scale_x_continuous(breaks = seq(min(df_noro$time), max(df_noro$time), by = 1)) +

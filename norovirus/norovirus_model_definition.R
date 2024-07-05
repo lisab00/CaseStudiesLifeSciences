@@ -29,7 +29,7 @@ cost <- function(p) {
 ## functions for health interventions
 # cleaning measures at time t=ti reduce virus appearance in water by effP
 signalP <- function(t, ti, effP) {
-  ifelse(t < ti, 0, 1-effP)
+  ifelse(t < ti, 1, 1-effP)
 }
 
 

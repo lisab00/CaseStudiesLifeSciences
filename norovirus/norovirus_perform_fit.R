@@ -67,11 +67,10 @@ for (i in 1:length(fits)){
 df_filtered <- df_fits[df_fits$fP>0.1,]
 df_filtered <- df_filtered[df_filtered$ssr<1002,]
 
-# I had a closer look (=plot) at indices 10,19,25,35 and decided afterwards
-# select between fit 10 and fit 25
-# fit 10: fI1=0.9343525, fP=0.3239087
-# fit 25: fI1=0.9806355, fP=0.1883925
-par_index <- 25
+# I had a closer look at indices 14,20,23 and decided afterwards
+# pick fit 14
+# fit 14: fI1=0.826, fP=0.169
+par_index <- 14
 pars_est <- coef(fits[[par_index]])
 
 
