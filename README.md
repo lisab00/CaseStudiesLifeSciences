@@ -13,3 +13,7 @@ Data descriptions and epidemic modelling,” Epidemics, vol. 25, pp. 20–25, 20
 [3] J. Wang, J. Rui, Y. Zhu, X. Guo, B. Abudunaibi, B. Zhao, Y. Su, T. Chen, and J. Hu, “Evaluation of
 the transmissibility of norovirus and the effectiveness of prevention and control measures for schools in
 jiangsu province,” Annals of Medicine, vol. 55, no. 2, p. 2246474, 2023.
+
+[4] M. V. Barbarossa, A. Dénes, G. Kiss, Y. Nakata, G. Röst, and Z. Vizi, “Transmission dynamics and
+final epidemic size of ebola virus disease outbreaks with varying interventions,” PLOS ONE, vol. 10,
+p. e0131398, July 2015
