@@ -33,34 +33,36 @@ alpha_p <- 1                    # rate of pathogen appearance in water (assumpti
 ## set state0
 N <- 1751 # N can be found in the Chinese version of the data set (outbreak-specific)
 state0 <- c(S=N-df_noro$I1[1],
-            E=df_noro$I1[1]/(1-0.3), # 0.3 is proportion asymptomatic
+            E=df_noro$I1[1]/(1-0.3)*a2, # 0.3 is proportion asymptomatic
             I1=df_noro$I1[1], D1=0, R=0, P=0)
 
 
 ## set parameter ranges that are supposed to be covered by grid search
 range_fI1 <- seq(0.5, 1, 0.1)
 range_fP <- seq(0.5, 1, 0.1)
+range_effP <- seq(0.3, 0.7,0.2)
 
 
 ## create parameter grid
-grid <- expand.grid(fI1=range_fI1, fP=range_fP)
+grid <- expand.grid(fI1=range_fI1, fP=range_fP, effP=range_effP)
 
 
 ## perform grid search
 fits <- list()
 
 for (i in 1:length(grid[,1])){
-  parms <- c(fI1=grid[i,]$fI1, fP=grid[i,]$fP)
-  fits[[i]] <- modFit(f=cost, p=parms, lower=c(0,0))
-  if (i%%5==0){print(i)} # progress control for larger grids
+  parms <- c(fI1=grid[i,]$fI1, fP=grid[i,]$fP, effP=grid[i,]$effP)
+  fits[[i]] <- modFit(f=cost, p=parms, lower=c(0,0,0))
+  if (i%%10==0){print(i)} # progress control for larger grids
 }
 
 
 ## evaluate results of grid search
-df_fits <- data.frame("fI1"=numeric(), "fP"=numeric(), "ssr"=numeric())
+df_fits <- data.frame("fI1"=numeric(), "fP"=numeric(), "effP"=numeric(), "ssr"=numeric())
 for (i in 1:length(fits)){
-  df_fits[i,] <- c(fits[[i]]$par[1], fits[[i]]$par[2], fits[[i]]$ssr)
+  df_fits[i,] <- c(fits[[i]]$par[1], fits[[i]]$par[2], fits[[i]]$par[3], fits[[i]]$ssr)
 }
+#save(df_fits, file="df_fits.Rda")
 
 # look at outputs and find a subset of suitable parameters
 # trade off between low ssr and reasonable parameter scale
@@ -80,3 +82,25 @@ plot(out)
 plot_against_data(df_noro, as.data.frame(out))
 plot_residuals(data.frame(t=df_noro$time, residuals=fits[[par_index]]$residuals))
 #plot(density(fits[[par_index]]$residuals))
+
+
+#df_heatmap <- data.frame(fI1_initial=grid$fI1, fP_initial=grid$fP, ssr=df_fits$ssr)
+'
+ggplot(data = df_heatmap, aes(x = fI1_initial, y = fP_initial, fill = ssr)) +
+  geom_tile() +
+  coord_fixed() +
+  scale_fill_gradient(low = "lightseagreen", high = "darkseagreen4") +
+  labs(title = "Heatmap of fI1 vs fP with SSR values", x = "fI1_initial", y = "fP_initial", fill = "SSR") +
+  theme_grey()'
+
+
+'df_fits$fI1 <- as.factor(df_fits$fI1)
+df_fits$fP <- as.factor(df_fits$fP)
+matrix_data <- with(df_fits, tapply(ssr, list(fI1, fP), mean))
+
+# Use the heatmap.2() function
+heatmap.2(matrix_data, col = colorRampPalette(c("lightseagreen", "darkseagreen4"))(100), trace = "none", density.info = "none")
+'
+
+## plot cost function 
+
