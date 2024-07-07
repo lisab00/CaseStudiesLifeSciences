@@ -23,7 +23,6 @@ ggplot(df_noro, aes(x = time, y = I1)) +
   theme_gray()
 
 
-
 ## plot intervention functions
 t=seq(df_noro$time[1], df_noro$time[length(df_noro$time)], 0.001)
 df_signals <- data.frame(
@@ -44,7 +43,7 @@ ggplot(df_signals, aes(x = t)) +
   theme_gray(base_size = 15) +
   ylim(0, 1)
 
-#plot for signalP
+# plot for signalP
 ggplot(df_signals, aes(x = t)) +
   geom_line(aes(y = signalP), size = 2, col="lightseagreen") +
   geom_vline(xintercept = ti, color = 'black', linetype='dashed', size=2) +
