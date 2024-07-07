@@ -1,6 +1,6 @@
 # =============================================================================
-# TO DO: Fitting Plague 2017 Madagascar
-# Author: Andrea Pinke
+# TO DO: Fitting the model to ebola 2014-16 in Liberia
+# Author: Valentin Rauscher
 # =============================================================================
 
 # Load required packages
@@ -8,7 +8,8 @@ library(tidyverse)
 library(deSolve)
 library(FME)
 
-df_ebola <- read.csv(file = "/home/valentin/CaseStudiesLifeSciences/ebola/ebola_data/country_timeseries.csv")
+
+df_ebola <- read.csv(file = "./ebola/ebola_data/country_timeseries.csv")
 df_ebola <- select(df_ebola, c("Date", "Day", "Cases_Guinea", "Cases_Liberia", "Cases_SierraLeone"))
 plot(df_ebola$Day, df_ebola$Cases_Liberia)
 
@@ -72,10 +73,9 @@ model <- function(t, x, parameters, ...){
 ## Choose initial parameter values, time interval, initial values for ode
 ##from Dènes et al: delta = 1694.57, mu = 0.000077, a2 = 0.124245 (1/(1.498*7), a3= ebola_induced death rate = 0.797/7 = )
 
-fictitous <- list(delta=1694.57, mu=0.000077 ,a1=1, a2=1/(1.498*7), a3=0.0702,
-                         a4=0.1852, a6=0.0260, a13=0.1,
-                         f14_3=1, f15_6=1, f17_4=1, fI1=0.076, fI2=0.5, fD=1)
+fictitous <- list(delta=1694.57, mu=0.000077 ,a1=1, a2=1/(1.498*7), a3=0.0702, a4=0.1852, a6=0.0260, a13=0.1, f14_3=coef(fit)[2], f15_6=1.0, f17_4=1.0, fI1=0.076, fI2=coef(fit)[2], fD=0.6165)
 ivFictitous <- c(S = 4000000, E = 0, I1 = 8, I2 = 0, R = 0, D1 = 0, D2 = 0, C = 0)
+
 times = rev(df_ebola$Day)
 
 ## Simulate and plot the model and the data
@@ -88,31 +88,40 @@ plot(simulation[, c(1)], simulation[, c(9)])
 lines(relevant_data_liberia$time, relevant_data_liberia$C, col="blue")
 
 # Define a cost function
+
+
+
+
 cost <- function(p) {
   fI2 <- p[1]
-  f14_3 <- p[2]
+  #a1 <- p[2]
+  #f14_3 <- p[2]
   #f15_6 <- p[3]
   #f17_4 <- p[4]
   #fD <- p[5]
-  #pp <- list(delta=1694.57, mu=0.000077 ,a1=1, a2=1/(1.498*7), a3=0.0702, a4=0.2040, a6=0.0260, a13=0.1, f14_3=f14_3, f15_6=1.0, f17_4=1.0, fI1=0.072, fI2=fI2, fD=0.1881)
-  pp <- list(delta=1694.57, mu=0.000077 ,a1=1, a2=1/(1.498*7), a3=0.0702, a4=0.1852, a6=0.0260, a13=0.1, f14_3=f14_3, f15_6=1.0, f17_4=1.0, fI1=0.076, fI2=fI2, fD=0.6165)
-  out <- ode( ivFictitous,  rev(relevant_data_liberia$time), model, pp, method = "rk4")
-  modCost(model = out[, c(1, 9)], obs = relevant_data_liberia, weight = "mean",method = "Marq")
+  pp <- list(delta=1694.57, mu=0.000077 ,a1=1.0, a2=1/(1.498*7), a3=0.0702, a4=0.2040, a6=0.0260, a13=0.1, f14_3=1.0, f15_6=1.0, f17_4=1.0, fI1=0.072, fI2=fI2, fD=0.1881)
+  #pp <- list(delta=1694.57, mu=0.000077 ,a1=1, a2=1/(1.498*7), a3=0.0702, a4=0.1852, a6=0.0260, a13=0.1, f14_3=10.0, f15_6=1.0, f17_4=10.0, fI1=0.076, fI2=fI2, fD=0.6165)
+  out <- ode(ivFictitous,  rev(relevant_data_liberia$time), model, pp, method = "radau")
+  modCost(model = out[, c(1, 9)], obs = relevant_data_liberia, weight = "none",method = "Marq")
 }
 ##f14_3=1, f15_6=1, f17_4=1, fI1=0.532, fI2=0.5, fD=1
-starterparm <- c(0.5, 1.0)
+starterparm <- c(0.3)
 # Set boundary constraints (all positive) for parameters and fit the model
-fit <- modFit(f = cost, p = starterparm, lower = c(0, 0))
+fit <- modFit(f = cost, p = starterparm, lower = c(0))
 summary(fit)
 coef(fit)
-
 ## Plot fitted model and data
-pp_beforeintervention <- list(delta=1694.57, mu=0.000077 ,a1=1, a2=1/(1.498*7), a3=0.0702, a4=0.1852, a6=0.0260, a13=0.1, f14_3=coef(fit)[2], f15_6=1.0, f17_4=1.0, fI1=0.076, fI2=coef(fit)[1], fD=0.6165)
-pp_afterintervention <- list(delta=1694.57, mu=0.000077 ,a1=1, a2=1/(1.498*7), a3=0.0702, a4=0.2040, a6=0.0260, a13=0.1, f14_3=coef(fit)[2], f15_6=1.0, f17_4=1.0, fI1=0.505, fI2=coef(fit)[1], fD=0.1881)
+pp_beforeintervention <- list(delta=1694.57, mu=0.000077 ,a1=1, a2=1/(1.498*7), a3=0.0702, a4=0.1852, a6=0.0260, a13=0.1, f14_3=10.0, f15_6=1.0, f17_4=1.0, fI1=0.076, fI2=coef(fit)[1], fD=0.6165)
+pp_afterintervention <- list(delta=1694.57, mu=0.000077 ,a1=1, a2=1/(1.498*7), a3=0.0702, a4=0.2040, a6=0.0260, a13=0.1, f14_3=10.0, f15_6=1.0, f17_4=1.0, fI1=0.505, fI2=0.0303, fD=0.1881)
 
 
 
-fitted_model <- ode( ivFictitous,  rev(relevant_data_liberia$time), model, pp_beforeintervention, method = "rk4")
+fitted_model <- ode( ivFictitous,  rev(relevant_data_liberia$time), model, pp_afterintervention, method = "radau")
+
 plot(fitted_model[,c(1)], fitted_model[,c(9)], col="red")
 lines(relevant_data_liberia$time, relevant_data_liberia$C)
+
+
+
+
 
